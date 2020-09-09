@@ -1,0 +1,24 @@
+In this second task of "Translation", I would be translating the Creating Virtual Machines Lab from Console instructions to 100% command line instructions.
+
+For more information, see below course on Pluralsight. 
+Course: Essential Google Cloud Infrastructure: Foundation
+Module: Virtual Machines
+Creating Virtual Machines Lab:- https://googlepluralsight.qwiklabs.com/focuses/10169049?parent=lti_session
+
+Overview:
+In this lab, I will explore the Virtual Machine instance options and create several VMs with different characteristics.
+
+Objectives:
+ 1. Explore the available options for VMs and see the differences between locations.
+ 2. learn how to perform the following tasks:
+    I. Create several standard VMs
+    II.Create advanced VMs
+
+Task 1: Create a utility virtual machine
+
+# To create a utility virtual machine using gcloud command line, run: 
+gcloud beta compute --project=qwiklabs-gcp-03-c54ee66fa6d3 instances create my --zone=us-central1-c --machine-type=e2-standard-2 --subnet=default --no-address --maintenance-policy=MIGRATE --service-account=765222569230-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --image=debian-9-stretch-v20200902 --image-project=debian-cloud --boot-disk-size=10GB --boot-disk-type=pd-standard --boot-disk-device-name=my --reservation-affinity=any
+
+## Explore the VM details
+# To Verify the VM details, run: 
+gcloud compute instances list
