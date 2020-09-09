@@ -54,4 +54,29 @@ gcloud beta compute reset-windows-password mywindows-vm --zone=europe-west2-a --
 
 Task 3: Create a custom virtual machine
 
+# Create a custom VM
+gcloud beta compute --project=qwiklabs-gcp-02-4beb8e34e3ba instances create custom-vm --zone=us-west1-b --machine-type=e2-custom-6-32768 --subnet=default --network-tier=PREMIUM --maintenance-policy=MIGRATE --service-account=341886322479-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --image=debian-10-buster-v20200902 --image-project=debian-cloud --boot-disk-size=10GB --boot-disk-type=pd-standard --boot-disk-device-name=custom-vm --no-shielded-secure-boot --no-shielded-vtpm --no-shielded-integrity-monitoring --reservation-affinity=any
+
+# Connect via SSH to your custom VM
+gcloud compute ssh custom-vm --zone=us-west1-b
+
+# To see information about unused and used memory and swap space on your custom VM, run the following command:
+free
+
+# To see details about the RAM installed on your VM, run the following command:
+sudo dmidecode -t 17
+
+# To verify the number of processors, run the following command:
+nproc
+
+# To see details about the CPUs installed on your VM, run the following command:
+lscpu
+
+# To exit the SSH terminal, run the following command:
+exit
+
+Task 4: Review
+In this lab, you created several virtual machine instances of different types with different characteristics. One was a small utility VM for administration purposes. You also created a standard VM and a custom VM. You launched both Windows and Linux VMs and deleted VMs.
+
+End your lab
 
