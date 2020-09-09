@@ -1,7 +1,7 @@
 # GoogleCloudProject
 This project is part of fulfilment of the Google Africa Developer Scholarship 2020.
 
-This project is divided in two parts as instructed here:
+The project is divided in two parts as instructed here:
 https://docs.google.com/document/d/1NiYTR1DahCkczxyDAQXuU3xzXOf1RbHLWGhJmpuegnE/edit
 
 
