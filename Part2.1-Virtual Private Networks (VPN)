@@ -1,6 +1,175 @@
-In this first task of "Translation", I would translate the Virtual Private Networks (VPN) Lab from Console instructions to 100% command line instructions.
+In this first task of "Translation", I would be translating the Virtual Private Networks (VPN) Lab from Console instructions to 100% command line instructions.
 
 For more information, see below course on Pluralsight. 
 Course: Elastic Google Cloud Infrastructure: Scaling and Automation
 Module: Interconnecting Networks
 Virtual Private Networks (VPN) - https://googlepluralsight.qwiklabs.com/focuses/10169210?parent=lti_session
+
+Overview
+In this lab, you establish VPN tunnels between two networks in separate regions such that a VM in one network can ping a VM in the other network over its internal IP address.
+Note1: In the lab the “PREQUISITEs” have been created for us. See the command line translations below (under perquisites).
+Note2: The   --project=qwiklabs-gcp-00-600d451b111e specified the PROJECT ID assigned to me for the lab by the QWIKLABS. Remember to replace it with yours: --project=<YOUR PROJECT ID>
+
+PREREQUISITES: 
+# Create VPC Network with name: vpn-network-1
+gcloud compute networks create vpn-network-1 --project=qwiklabs-gcp-00-600d451b111e --subnet-mode=custom --bgp-routing-mode=regional
+
+gcloud compute networks subnets create subnet-a --project=qwiklabs-gcp-00-600d451b111e --range=10.5.4.0/24 --network=vpn-network-1 --region=us-central1
+
+# Create icmp Firewall rule for vpn-network-1
+gcloud compute firewall-rules create network-1-allow-icmp --network vpn-network-1 --allow icmp --source-ranges 0.0.0.0/0
+
+# Create ssh Firewall rule for vpn-network-1
+gcloud compute firewall-rules create network-1-allow-ssh --network vpn-network-1 --allow tcp:22 --source-ranges 0.0.0.0/0
+
+
+# Create another VPC Network with name: vpn-network-2
+gcloud compute networks create vpn-network-2 --project=qwiklabs-gcp-00-600d451b111e --subnet-mode=custom --bgp-routing-mode=regional
+
+gcloud compute networks subnets create subnet-b --project=qwiklabs-gcp-00-600d451b111e --range=10.1.3.0/24 --network=vpn-network-2 --region=europe-west1
+
+
+# Create icmp Firewall rule for vpn-network-2
+gcloud compute firewall-rules create network-2-allow-icmp --network vpn-network-2 --allow icmp --source-ranges 0.0.0.0/0
+
+# Create ssh Firewall rule for vpn-network-2
+gcloud compute firewall-rules create network-2-allow-ssh --network vpn-network-2 --allow tcp:22 --source-ranges 0.0.0.0/0
+## There is need to create two virtual machine instances (server-1 and server-2) that will be used to connectivity testing. 
+
+# create server-1 instance in zone: us-central1-b
+gcloud beta compute --project=qwiklabs-gcp-00-5f25d4b48699 instances create server-1 --zone=us-central1-b --machine-type=e2-standard-2 --subnet=subnet-a --network-tier=PREMIUM --maintenance-policy=MIGRATE --service-account=1026058317825-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --image=debian-9-stretch-v20200902 --image-project=debian-cloud --boot-disk-size=10GB --boot-disk-type=pd-standard --boot-disk-device-name=server-3 --reservation-affinity=any
+# create server-2 instance in zone: europe-west1-b
+gcloud beta compute --project=qwiklabs-gcp-00-5f25d4b48699 instances create server-2 --zone=europe-west1-b --machine-type=e2-standard-2 --subnet=subnet-b --network-tier=PREMIUM --maintenance-policy=MIGRATE --service-account=1026058317825-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --image=debian-9-stretch-v20200902 --image-project=debian-cloud --boot-disk-size=10GB --boot-disk-type=pd-standard --boot-disk-device-name=server-3 --reservation-affinity=any
+
+Task 1: Explore the networks and instances
+Two custom networks with VM instances have been configured for you (See PREQUISITES above). For the purposes of the lab, both networks are VPC networks within a Google Cloud project. However, in a real-world application, one of these networks might be in a different Google Cloud project, on-premises, or in a different cloud.
+
+## Explore the networks (Verify that vpn-network-1 and vpn-network-2 have been created with subnets in separate regions)
+
+# Run the following command to list the available VPC networks
+gcloud compute networks list
+
+# Run the following command to list the available VPC subnets (sorted by VPC network):
+gcloud compute networks subnets list --sort-by=NETWORK
+
+## Explore the firewall rules
+# Run the following command to list all the firewall rules (sorted by VPC network):
+gcloud compute firewall-rules list --sort-by=NETWORK
+
+## Explore the instances and their connectivity
+# To explore the instances, run: 
+gcloud compute instances list
+
+# To SSH to server-1 from Google Shell, run.
+gcloud compute ssh server-1 --zone=us-central1-b
+
+# To test connectivity to server-2's external IP address, run the following command, replacing server-2's external IP address with the value noted earlier:
+ping –c 3 104.199.9.8
+# To test connectivity to server-2's internal IP address, run the following command, replacing server-2's internal IP address with the value noted earlier:
+ping –c 10.1.3.2
+
+# Exit the SSH terminal. Type: 
+Exit
+
+# To SSH to server-2 from Google Shell, run.
+gcloud compute ssh server-2 --zone=europe-west1-b
+# To test connectivity to server-1's external IP address, run the following command, replacing server-1's external IP address with the value noted earlier:
+ping –c 3 35.188.33.176
+
+# To test connectivity to server-1's internal IP address, run the following command, replacing server-1's internal IP address with the value noted earlier:
+ping –c 3 10.5.4.2
+
+# Exit the SSH terminal. Type: 
+Exit
+
+Task 2: Create the VPN gateways and tunnels
+Establish private communication between the two VM instances by creating VPN gateways and tunnels between the two networks.
+
+## Reserve two static IP addresses (one each in us-central1 and europe-west1 region)
+# create reserve1
+gcloud compute addresses create vpn-1-static-ip --project=qwiklabs-gcp-00-5f25d4b48699 --region=us-central1
+
+# create reserve2
+gcloud compute addresses create vpn-2-static-ip --project=qwiklabs-gcp-00-5f25d4b48699 --region=europe-west1
+
+# Create the vpn-1 gateway and tunnel1to2
+gcloud compute --project "qwiklabs-gcp-00-5f25d4b48699" target-vpn-gateways create "vpn-1" --region "us-central1" --network "vpn-network-1"
+
+gcloud compute --project "qwiklabs-gcp-00-5f25d4b48699" forwarding-rules create "vpn-1-rule-esp" --region "us-central1" --address "34.122.101.66" --ip-protocol "ESP" --target-vpn-gateway "vpn-1"
+
+gcloud compute --project "qwiklabs-gcp-00-5f25d4b48699" forwarding-rules create "vpn-1-rule-udp500" --region "us-central1" --address "34.122.101.66" --ip-protocol "UDP" --ports "500" --target-vpn-gateway "vpn-1"
+
+gcloud compute --project "qwiklabs-gcp-00-5f25d4b48699" forwarding-rules create "vpn-1-rule-udp4500" --region "us-central1" --address "34.122.101.66" --ip-protocol "UDP" --ports "4500" --target-vpn-gateway "vpn-1"
+
+gcloud compute --project "qwiklabs-gcp-00-5f25d4b48699" vpn-tunnels create "tunnel1to2" --region "us-central1" --peer-address "35.205.184.165" --shared-secret "gcprocks" --ike-version "2" --local-traffic-selector "0.0.0.0/0" --target-vpn-gateway "vpn-1"
+
+gcloud compute --project "qwiklabs-gcp-00-5f25d4b48699" routes create "tunnel1to2-route-1" --network "vpn-network-1" --next-hop-vpn-tunnel "tunnel1to2" --next-hop-vpn-tunnel-region "us-central1" --destination-range "10.1.3.0/24"
+
+
+# Create the vpn-2 gateway and tunnel2to1
+
+gcloud compute --project "qwiklabs-gcp-00-5f25d4b48699" target-vpn-gateways create "vpn-2" --region "europe-west1" --network "vpn-network-2"
+
+gcloud compute --project "qwiklabs-gcp-00-5f25d4b48699" forwarding-rules create "vpn-2-rule-esp" --region "europe-west1" --address "35.205.184.165" --ip-protocol "ESP" --target-vpn-gateway "vpn-2"
+
+gcloud compute --project "qwiklabs-gcp-00-5f25d4b48699" forwarding-rules create "vpn-2-rule-udp500" --region "europe-west1" --address "35.205.184.165" --ip-protocol "UDP" --ports "500" --target-vpn-gateway "vpn-2"
+
+gcloud compute --project "qwiklabs-gcp-00-5f25d4b48699" forwarding-rules create "vpn-2-rule-udp4500" --region "europe-west1" --address "35.205.184.165" --ip-protocol "UDP" --ports "4500" --target-vpn-gateway "vpn-2"
+
+gcloud compute --project "qwiklabs-gcp-00-5f25d4b48699" vpn-tunnels create "tunnel2to1" --region "europe-west1" --peer-address "34.122.101.66" --shared-secret "gcprocks" --ike-version "2" --local-traffic-selector "0.0.0.0/0" --target-vpn-gateway "vpn-2"
+
+gcloud compute --project "qwiklabs-gcp-00-5f25d4b48699" routes create "tunnel2to1-route-1" --network "vpn-network-2" --next-hop-vpn-tunnel "tunnel2to1" --next-hop-vpn-tunnel-region "europe-west1" --destination-range "10.5.4.0/24"
+
+Task 3: Verify VPN connectivity (server-1 to server-2 )
+
+# To SSH to server-1 from Google Shell, run:
+gcloud compute ssh server-1 --zone=us-central1-b
+
+# To test connectivity to server-2's internal IP address, run the following command, replacing server-2's internal IP address with the value noted earlier:
+ping –c 3 10.1.3.2
+
+# Exit the SSH terminal. Type: 
+Exit
+
+# To SSH to server-2 from Google Shell, run:
+gcloud compute ssh server-2 --zone=europe-west1-b
+
+# To test connectivity to server-1's internal IP address, run the following command, replacing server-1's internal IP address with the value noted earlier:
+ping –c 3 10.5.4.2
+
+# Exit the SSH terminal. Type: 
+Exit
+
+## Remove the external IP addresses
+Now that you verified VPN connectivity, you can remove the instances' external IP addresses. For demonstration purposes, just do this for the server-1 instance.
+Note: you need to stop the instances to be able to modify it.
+
+# Run the following command to stop server-1
+gcloud compute instances stop server-1 --zone=us-central1-b
+
+# To verity server-1 has been stopped, run: 
+gcloud compute instances list
+
+# For the network interfaces, Change External IP from EPHEMERAL to NONE by run the following command: 
+gcloud compute instances delete-access-config server-1 --access-config-name="External NAT" --zone us-central1-b
+
+# To verity server-1’s external IP has change to none, run: 
+gcloud compute instances list
+
+Feel free to SSH to server-2 and verify that you can still ping the server-1 instance's internal IP address. You won't be able to SSH to server-1 from the Cloud Console but you can do so from Cloud Shell using Cloud IAP as described here: https://cloud.google.com/solutions/building-internet-connectivity-for-private-vms#configuring_iap_tunnels_for_interacting_with_instances
+
+# To SSH to server-2 from Google Shell, run.
+gcloud compute ssh server-2 --zone=europe-west1-b
+
+# To test connectivity to server-1's internal IP address, run the following command, replacing server-1's internal IP address with the value noted earlier:
+ping –c 3 10.5.4.2
+
+# Exit the SSH terminal. Type: 
+Exit
+
+Task 4: Review
+In this lab, you configured a VPN connection between two networks with subnets in different regions. Then you verified the VPN connection by pinging VMs in different networks using their internal IP addresses.
+You configured the VPN gateways and tunnels using the Cloud Console. However, this approach obfuscated the creation of forwarding rules, which you explored with the command line button in the Console. This can help in troubleshooting a configuration.
+
+End your lab
+
