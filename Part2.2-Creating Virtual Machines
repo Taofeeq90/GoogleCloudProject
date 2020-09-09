@@ -49,3 +49,9 @@ gcloud compute --project=qwiklabs-gcp-02-b25b6397352c firewall-rules create defa
 
 
 ## Set the password for the VM
+# Set the RDP account for the Windows Instance using User=Administrator
+gcloud beta compute reset-windows-password mywindows-vm --zone=europe-west2-a --user=Administrator
+
+Task 3: Create a custom virtual machine
+
+
